@@ -20,8 +20,18 @@ body, * {
   font-family: 'Nunito', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
+/* Prevent horizontal scrolling at root level */
+html, body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+}
+
 /* Main background + text */
-.stApp { background:#FFFCF5; color:#2E2E2E; }
+.stApp { 
+  background:#FFFCF5; 
+  color:#2E2E2E;
+  overflow-x: hidden !important;
+}
 
 /* Header (top bar) - cream to match body */
 header[data-testid="stHeader"]{
@@ -43,6 +53,9 @@ section[data-testid="stSidebar"] p{
 .stButton > button:first-child{
   background:#B392AC !important; border:none !important; border-radius:8px !important;
   width:100%; padding:0.6em 1em; margin:6px 0;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 .stButton > button:first-child *{ color:#FFFCF5 !important; fill:#FFFCF5 !important; }
 .stButton > button:hover{ background:#735D78 !important; }
@@ -94,7 +107,30 @@ section[data-testid="stSidebar"] .stButton > button:hover {
 }
 
 /* Make center container transparent so cream shows through */
-.main .block-container{ background:transparent !important; }
+.main .block-container{ 
+  background:transparent !important;
+  max-width: 100% !important;
+  padding-left: 1rem !important;
+  padding-right: 1rem !important;
+  box-sizing: border-box !important;
+}
+
+/* Main content area - prevent overflow */
+.main {
+  overflow-x: hidden !important;
+  max-width: 100% !important;
+}
+
+/* Ensure columns align properly at all zoom levels */
+.stColumns, [data-testid="stHorizontalBlock"] {
+  gap: 0.5rem !important;
+  flex-wrap: nowrap !important;
+  max-width: 100% !important;
+}
+[data-testid="column"] {
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
 
 /* Headings in main area */
 h1,h2,h3,h4,h5{ color:#6B4C98; }
@@ -708,6 +744,8 @@ div[data-testid="column"] div[data-testid="stHorizontalBlock"] div[data-testid="
   height: 28px !important;
   min-height: 28px !important;
   margin-top: 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
 }
 
 /* Force button text to be visible - target all inner elements */
@@ -756,15 +794,18 @@ div[data-testid="column"] div[data-testid="stPopover"] > button:first-child {
   border: none !important;
   border-radius: 10px !important;
   color: #6B4C98 !important;
-  font-size: 15px !important;
+  font-size: 14px !important;
   height: 36px !important;
   width: 100% !important;
-  min-width: 80px !important;
+  min-width: 60px !important;
   text-align: center !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   transition: background-color 0.2s ease !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 /* Active/clicked state */
 div[data-testid="column"] div[data-testid="stPopover"] > button:active,
@@ -985,56 +1026,39 @@ st.sidebar.image("logo.png")
 st.sidebar.title("Generate outfits from your wardrobe.")
 #st.sidebar.write("Your digital stylist")
 
-# Backend connection status
-try:
-    api_client.health_check()
-    st.sidebar.success("✓ Backend connected")
-except Exception as e:
-    st.sidebar.error(f"✗ Backend offline")
-
 if "page" not in st.session_state:
     st.session_state.page = "My Wardrobe"
 
-# --- Sidebar buttons ---
-if st.sidebar.button("My Wardrobe", use_container_width=True):
-    st.session_state.page = "My Wardrobe"
-if st.sidebar.button("Outfit Builder", use_container_width=True):
-    st.session_state.page = "Outfit Builder"
-if st.sidebar.button("Saved Outfits", use_container_width=True):
-    st.session_state.page = "Saved Outfits"
+# --- Sidebar buttons with active state ---
+pages = ["My Wardrobe", "Outfit Builder", "Saved Outfits"]
+
+for page_name in pages:
+    is_active = st.session_state.page == page_name
+    
+    if is_active:
+        # Active button - darker purple
+        st.sidebar.markdown(
+            f"""
+            <div style="
+                background: #715d78;
+                color: white;
+                padding: 0.6em 1em;
+                border-radius: 8px;
+                text-align: center;
+                font-weight: 600;
+                margin: 6px 0;
+                cursor: default;
+            ">{page_name}</div>
+            """,
+            unsafe_allow_html=True
+        )
+    else:
+        # Inactive button - clickable
+        if st.sidebar.button(page_name, use_container_width=True, key=f"nav_{page_name}"):
+            st.session_state.page = page_name
+            st.rerun()
 
 page = st.session_state.page
-
-# Add JavaScript to highlight active page button
-current_page = st.session_state.page
-st.sidebar.markdown(
-    f"""
-    <script>
-    (function() {{
-        // Wait for DOM to be ready
-        setTimeout(function() {{
-            var buttons = document.querySelectorAll('section[data-testid="stSidebar"] .stButton > button');
-            var pageMap = {{
-                'My Wardrobe': 'My Wardrobe',
-                'Outfit Builder': 'Outfit Builder',
-                'Saved Outfits': 'Saved Outfits'
-            }};
-            var currentPage = '{current_page}';
-            
-            buttons.forEach(function(button) {{
-                var buttonText = button.textContent.trim();
-                if (buttonText === currentPage) {{
-                    button.classList.add('active-page');
-                }} else {{
-                    button.classList.remove('active-page');
-                }}
-            }});
-        }}, 100);
-    }})();
-    </script>
-    """,
-    unsafe_allow_html=True
-)
 
 # --- Initialize session state (MUST be first) ---
 if "uploaded_items" not in st.session_state:
@@ -1049,6 +1073,8 @@ if "items_loaded_from_backend" not in st.session_state:
     st.session_state.items_loaded_from_backend = False
 if "editing_item_id" not in st.session_state:
     st.session_state.editing_item_id = None
+if "show_save_success" not in st.session_state:
+    st.session_state.show_save_success = False
 
 # --- My Wardrobe Page ---
 if page == "My Wardrobe":
@@ -1088,6 +1114,12 @@ if page == "My Wardrobe":
     # Logo directly above My Wardrobe with no spacing
     st.image("horizontal_logo.png", use_container_width=False, width=400)
     st.subheader("My Wardrobe")
+    
+    # Show success message if item was just saved (auto-dismisses)
+    if st.session_state.show_save_success:
+        st.toast("Changes saved!")
+        st.session_state.show_save_success = False
+    
     # Fix pluralization: "1 item" vs "X items"
     item_count = len(st.session_state.uploaded_items) if st.session_state.uploaded_items else 0
     if item_count == 1:
@@ -1247,31 +1279,40 @@ if page == "My Wardrobe":
             st.session_state.filter_occasion = "All Occasions"
         if "filter_color" not in st.session_state:
             st.session_state.filter_color = "All Colors"
+        if "filter_season" not in st.session_state:
+            st.session_state.filter_season = "All Seasons"
         
         # Get unique values for filters
         all_categories = ["All Categories"] + sorted(list(set([item.get("category", "") for item in st.session_state.uploaded_items if item.get("category")])))
         all_occasions = ["All Occasions"] + sorted(list(set([occ for item in st.session_state.uploaded_items for occ in item.get("occasions", [])])))
         all_colors = ["All Colors"] + sorted(list(set([color for item in st.session_state.uploaded_items for color in item.get("colors", [])])))
+        all_seasons = ["All Seasons"] + sorted(list(set([season for item in st.session_state.uploaded_items for season in (item.get("season", []) if isinstance(item.get("season"), list) else [item.get("season")] if item.get("season") else [])])))
         
-        # Filter dropdowns
-        col1, col2, col3 = st.columns(3)
-        with col1:
+        # Filter dropdowns - 2 rows for better alignment at all zoom levels
+        filter_row1_col1, filter_row1_col2, filter_row1_col3, filter_row1_col4 = st.columns(4)
+        with filter_row1_col1:
             st.session_state.filter_category = st.selectbox(
                 "Filter by Category",
                 all_categories,
                 index=all_categories.index(st.session_state.filter_category) if st.session_state.filter_category in all_categories else 0
             )
-        with col2:
+        with filter_row1_col2:
             st.session_state.filter_occasion = st.selectbox(
                 "Filter by Occasion",
                 all_occasions,
                 index=all_occasions.index(st.session_state.filter_occasion) if st.session_state.filter_occasion in all_occasions else 0
             )
-        with col3:
+        with filter_row1_col3:
             st.session_state.filter_color = st.selectbox(
                 "Filter by Color",
                 all_colors,
                 index=all_colors.index(st.session_state.filter_color) if st.session_state.filter_color in all_colors else 0
+            )
+        with filter_row1_col4:
+            st.session_state.filter_season = st.selectbox(
+                "Filter by Season",
+                all_seasons,
+                index=all_seasons.index(st.session_state.filter_season) if st.session_state.filter_season in all_seasons else 0
             )
         
         # Filter items - only apply filter if not "All" option
@@ -1294,10 +1335,20 @@ if page == "My Wardrobe":
             filtered_items = [item for item in filtered_items if filter_color.lower() in [c.lower() for c in item.get("colors", [])]]
         # If "All Colors" is selected, don't filter by color (show all items regardless of color)
         
+        # Season filter
+        filter_season = str(st.session_state.filter_season).strip() if st.session_state.filter_season else ""
+        if filter_season and filter_season != "All Seasons":
+            def item_has_season(item, season):
+                item_seasons = item.get("season", [])
+                if isinstance(item_seasons, str):
+                    item_seasons = [item_seasons] if item_seasons else []
+                return season in item_seasons
+            filtered_items = [item for item in filtered_items if item_has_season(item, filter_season)]
+        
         # Display filtered items in card layout using st.columns for grid
         if filtered_items:
-            # Create grid: 4 columns per row
-            items_per_row = 4
+            # Create grid: 3 columns per row for better spacing
+            items_per_row = 3
             for row_start in range(0, len(filtered_items), items_per_row):
                 row_items = filtered_items[row_start:row_start + items_per_row]
                 cols = st.columns(len(row_items))
@@ -1379,7 +1430,7 @@ if page == "My Wardrobe":
                             all_tags += f'<span style="{grey_tag_style}">{occ}</span>'
                         
                         st.markdown(
-                            f'<div style="display:flex; flex-wrap:wrap; align-items:center; padding:0 12px 8px 12px;">{all_tags}</div>'
+                            f'<div style="display:flex; flex-wrap:wrap; align-items:flex-start; padding:0 12px 8px 12px; min-height:70px; max-height:70px; overflow:hidden;">{all_tags}</div>'
                             f'</div>',
                             unsafe_allow_html=True
                         )
@@ -1422,36 +1473,26 @@ if page == "My Wardrobe":
                                 
                                 if st.button("Save Changes", key=f"save_{item_id}", use_container_width=True):
                                     try:
-                                        # Parse colors from comma-separated string, ensure no None values
-                                        colors_list = [c.strip() for c in (edit_colors or "").split(",") if c.strip()]
+                                        with st.spinner("Saving changes..."):
+                                            # Parse colors from comma-separated string, ensure no None values
+                                            colors_list = [c.strip() for c in (edit_colors or "").split(",") if c.strip()]
 
-                                        # Save to database
-                                        api_client.update_wardrobe_item(
-                                            item_id=item_id,
-                                            category=edit_category,
-                                            subcategory=edit_subcategory or "",
-                                            season=edit_season or [],
-                                            brand=edit_brand or "",
-                                            colors=colors_list,
-                                            occasions=edit_occasions or [],
-                                            notes=edit_notes or ""
-                                        )
+                                            # Save to database
+                                            api_client.update_wardrobe_item(
+                                                item_id=item_id,
+                                                category=edit_category,
+                                                subcategory=edit_subcategory or "",
+                                                season=edit_season or [],
+                                                brand=edit_brand or "",
+                                                colors=colors_list,
+                                                occasions=edit_occasions or [],
+                                                notes=edit_notes or ""
+                                            )
 
-                                        # Update session state for immediate UI feedback
-                                        for session_item in st.session_state.uploaded_items:
-                                            if session_item.get("item_id") == item_id:
-                                                session_item["category"] = edit_category
-                                                session_item["subcategory"] = edit_subcategory
-                                                session_item["season"] = edit_season
-                                                session_item["brand"] = edit_brand
-                                                session_item["colors"] = colors_list
-                                                session_item["occasions"] = edit_occasions
-                                                session_item["notes"] = edit_notes
-                                                break
-
-                                        # Clear cache so next load gets fresh data
-                                        get_cached_wardrobe_items.clear()
-                                        st.success("✓ Changes saved!")
+                                            # Clear cache and force reload from backend on next run
+                                            get_cached_wardrobe_items.clear()
+                                            st.session_state.items_loaded_from_backend = False
+                                            st.session_state.show_save_success = True
                                         st.rerun()
                                     except Exception as e:
                                         st.error(f"Failed to save: {str(e)}")
@@ -1478,6 +1519,23 @@ if page == "My Wardrobe":
 elif page == "Outfit Builder":
     st.subheader("Outfit Builder")
     st.write("Create an outfit by selecting items from each category.")
+
+    # TEST BUTTON - remove after testing
+    st.markdown("---")
+    st.markdown("### Test Auto-Generate")
+    test_col1, test_col2 = st.columns(2)
+    with test_col1:
+        test_occasion = st.selectbox("Test Occasion", ["Casual", "Formal", "Business", "Party"], key="test_occ")
+    with test_col2:
+        test_season = st.selectbox("Test Season", ["Spring", "Summer", "Fall", "Winter"], key="test_sea")
+    if st.button("Test Generate Outfit"):
+        try:
+            response = api_client.generate_outfits(test_occasion, test_season)
+            st.write("Response:", response)
+        except Exception as e:
+            st.error(f"Error: {e}")
+    st.markdown("---")
+    # END TEST BUTTON
 
     if len(st.session_state.uploaded_items) == 0:
         st.info("Upload some items in 'My Wardrobe' first!")
