@@ -17,19 +17,20 @@ CLEANUP BEFORE FINAL SUBMISSION
 
 FOR SATOMI (Database Work Needed)
 ---------------------------------
-1. Outfit Name Column
+1. Outfit Name Column [x]
    - Currently storing outfit names in the occasion field as a workaround
    - Format: "Outfit Name | Occasion" 
    - Location: backend/app/api/endpoints.py line 281
    - Need to run: ALTER TABLE saved_outfits ADD COLUMN name VARCHAR(255) DEFAULT '';
    - Then update the save_outfit and get_saved_outfits endpoints to use the new column
 
-2. Edit Metadata Not Persisted
+
+2. Edit Metadata Not Persisted [x]
    - The Edit button on wardrobe items only saves to session state right now
    - Need UPDATE queries in backend for metadata fields (occasion, season, colors, notes)
    - wardrobe_items table has a metadata JSONB column but we're not updating it
 
-3. S3 Presigned URLs
+3. S3 Presigned URLs []
    - Currently converting S3 URIs to presigned URLs on every API request
    - This works but might want to consider CDN or storing public URLs instead
 
