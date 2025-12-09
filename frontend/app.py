@@ -1083,6 +1083,7 @@ if page == "My Wardrobe":
         try:
             response = get_cached_wardrobe_items()
             backend_items = response.get("items", [])
+
             
             # Convert backend items to match session state format
             # Backend items have image_url, but we need to keep them as-is

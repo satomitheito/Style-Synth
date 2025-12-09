@@ -1,70 +1,98 @@
 import numpy as np
-import pickle
 from typing import List, Dict
 from RecommendationFiles.recommendation_engine import FashionRecommendationEngine
 
 
 class OutfitRecommender:
-
     def __init__(
         self,
         engine_pkl_path: str = "RecommendationFiles/recommendation_engine.pkl",
-        metadata_path: str = "backend/app/recommendations/item_metadata.pkl"
     ):
+        # Load FAISS index + embeddings
         self.engine = FashionRecommendationEngine.load(engine_pkl_path)
 
-        # Load metadata containing:
-        # item_id: class_label, season_tags, occasion_tags
-        with open(metadata_path, "rb") as f:
-            self.meta = pickle.load(f)
-
-    # Build outfit recommendations using FAISS + metadata
-    def recommend_outfits(self, occasion: str, season: str, k: int = 10):
-        outfits = []
-
-        # Filter items that match occasion + season tags
-        valid_indices = [
-            idx for idx, item in self.meta.items()
-            if occasion.lower() in item["occasion"]
-            and season.lower() in item["season"]
-        ]
-
-        if not valid_indices:
-            return []
-
-        # Compute centroid embedding of valid items
-        embeddings = self.engine.embeddings[valid_indices]
-        query_vector = np.mean(embeddings, axis=0)
-
-        # Query FAISS ANN
-        recommendations = self.engine.recommend(
-            query_embedding=query_vector,
-            k=k,
+    async def recommend_outfits(self, occasion: str, season: str, db, k: int = 10):
+        """
+        Build outfit recommendations using REAL wardrobe items stored in PostgreSQL.
+        """
+        wardrobe = await db.fetch(
+            """
+            SELECT w.item_id, w.category, w.metadata, e.embedding
+            FROM wardrobe_items w
+            JOIN embeddings e ON e.item_id = w.item_id
+            """
         )
 
-        # Build outfit suggestions by grouping categories
-        tops = []
-        bottoms = []
-        shoes = []
+        if not wardrobe:
+            return []
+
+        def extract_list(meta, key):
+            if not meta:
+                return []
+            if isinstance(meta, str):
+                try:
+                    import json
+                    meta = json.loads(meta)
+                except:
+                    return []
+            v = meta.get(key, [])
+            if isinstance(v, str):
+                return [v.lower()]
+            return [x.lower() for x in v]
+
+        filtered = []
+        for row in wardrobe:
+            meta = row["metadata"]
+            item_occasions = extract_list(meta, "occasions")
+            item_seasons = extract_list(meta, "season")
+
+            if occasion.lower() in item_occasions and season.lower() in item_seasons:
+                filtered.append(row)
+
+        if not filtered:
+            return []
+
+        emb_matrix = np.vstack([row["embedding"] for row in filtered])
+        query_vec = np.mean(emb_matrix, axis=0)
+
+        recommendations = self.engine.recommend(
+            query_embedding=query_vec,
+            k=50,     # get a rich pool; we will filter by category next
+        )
+
+        tops, bottoms, shoes = [], [], []
+
+        # Build lookup for speed
+        wardrobe_map = {row["item_id"]: row for row in wardrobe}
 
         for rec in recommendations:
-            item_meta = self.meta[rec["index"]]
-            category = item_meta["category"]
+            idx = rec["index"]
 
-            if category == "top":
-                tops.append(rec["index"])
-            elif category == "bottom":
-                bottoms.append(rec["index"])
-            elif category == "shoes":
-                shoes.append(rec["index"])
+            # model may index embeddings array, so map index → item_id
+            if idx not in wardrobe_map:
+                continue
 
-        # Combine into outfits
+            item = wardrobe_map[idx]
+            cat = item["category"]
+
+            if cat == "top":
+                tops.append(idx)
+            elif cat == "bottom":
+                bottoms.append(idx)
+            elif cat == "shoes":
+                shoes.append(idx)
+
+        # Must have at least one of each to build outfits
+        if not tops or not bottoms or not shoes:
+            return []
+
+        outfits = []
         for t in tops[:5]:
             for b in bottoms[:5]:
                 for s in shoes[:5]:
                     outfits.append({
                         "items": [t, b, s],
-                        "score": 1.0  # FAISS does not provide multi-item scoring here
+                        "score": 1.0
                     })
 
         return outfits[:k]
