@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, UploadFile, File, Depends
 from pydantic import BaseModel
-from typing import List
+from typing import List, Optional
 from uuid import uuid4
 import json
 import io
@@ -270,8 +270,8 @@ async def predict_image(
 # Generate Outfits
 # -----------------------------
 @router.post("/outfits/generate")
-async def generate_outfits(req: OutfitRequest):
-    outfits = recommender.recommend_outfits(req.occasion, req.season)
+async def generate_outfits(req: OutfitRequest, db=Depends(get_db)):
+    outfits = await recommender.recommend_outfits(req.occasion, req.season, db)
     return {
         "occasion": req.occasion,
         "season": req.season,
@@ -376,6 +376,57 @@ async def delete_outfit(outfit_id: str, db=Depends(get_db)):
         return {"status": "success", "deleted_outfit_id": outfit_id}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Delete outfit failed: {str(e)}")
+
+
+# -----------------------------
+# Update Saved Outfit
+# -----------------------------
+class UpdateOutfitRequest(BaseModel):
+    name: Optional[str] = None
+    occasion: Optional[str] = None
+    season: Optional[str] = None
+    items: Optional[List[int]] = None
+
+@router.patch("/outfits/{outfit_id}")
+async def update_outfit(outfit_id: str, req: UpdateOutfitRequest, db=Depends(get_db)):
+    try:
+        # Build dynamic update query based on provided fields
+        updates = []
+        values = []
+        param_num = 1
+        
+        if req.name is not None:
+            updates.append(f"name = ${param_num}")
+            values.append(req.name)
+            param_num += 1
+        
+        if req.occasion is not None:
+            updates.append(f"occasion = ${param_num}")
+            values.append(req.occasion)
+            param_num += 1
+        
+        if req.season is not None:
+            updates.append(f"season = ${param_num}")
+            values.append(req.season)
+            param_num += 1
+        
+        if req.items is not None:
+            updates.append(f"items = ${param_num}")
+            values.append(req.items)
+            param_num += 1
+        
+        if not updates:
+            return {"status": "success", "message": "No updates provided", "outfit_id": outfit_id}
+        
+        # Add outfit_id as the last parameter
+        values.append(outfit_id)
+        
+        query = f"UPDATE saved_outfits SET {', '.join(updates)} WHERE outfit_id = ${param_num}"
+        await db.execute(query, *values)
+        
+        return {"status": "success", "updated_outfit_id": outfit_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Update outfit failed: {str(e)}")
 
 
 # -----------------------------

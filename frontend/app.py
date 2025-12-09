@@ -1075,6 +1075,8 @@ if "editing_item_id" not in st.session_state:
     st.session_state.editing_item_id = None
 if "show_save_success" not in st.session_state:
     st.session_state.show_save_success = False
+if "editing_outfit" not in st.session_state:
+    st.session_state.editing_outfit = None
 
 # --- My Wardrobe Page ---
 if page == "My Wardrobe":
@@ -1552,24 +1554,7 @@ if page == "My Wardrobe":
 # --- Outfit Builder Page ---
 elif page == "Outfit Builder":
     st.subheader("Outfit Builder")
-    st.write("Create an outfit by selecting items from each category.")
-
-    # TEST BUTTON - remove after testing
-    st.markdown("---")
-    st.markdown("### Test Auto-Generate")
-    test_col1, test_col2 = st.columns(2)
-    with test_col1:
-        test_occasion = st.selectbox("Test Occasion", ["Casual", "Formal", "Business", "Party"], key="test_occ")
-    with test_col2:
-        test_season = st.selectbox("Test Season", ["Spring", "Summer", "Fall", "Winter"], key="test_sea")
-    if st.button("Test Generate Outfit"):
-        try:
-            response = api_client.generate_outfits(test_occasion, test_season)
-            st.write("Response:", response)
-        except Exception as e:
-            st.error(f"Error: {e}")
-    st.markdown("---")
-    # END TEST BUTTON
+    st.write("Create an outfit by selecting an occasion and season and we will auto-generate one for you!")
 
     if len(st.session_state.uploaded_items) == 0:
         st.info("Upload some items in 'My Wardrobe' first!")
@@ -1577,15 +1562,75 @@ elif page == "Outfit Builder":
         # Initialize outfit selections in session state
         if "outfit_selections" not in st.session_state:
             st.session_state.outfit_selections = {}
+        if "generated_outfits" not in st.session_state:
+            st.session_state.generated_outfits = None
         
-        # Group items by category
-        categories = ["Tops", "Bottoms", "Dresses", "Outerwear", "Shoes", "Accessories"]
-        items_by_category = {cat: [] for cat in categories}
+        # --- Auto-Generate Section ---
+        gen_col1, gen_col2, gen_col3 = st.columns([2, 2, 1])
+        with gen_col1:
+            gen_occasion = st.selectbox("Occasion", ["Casual", "Formal", "Business", "Party", "Everyday", "Athletic"], key="gen_occasion")
+        with gen_col2:
+            gen_season = st.selectbox("Season", ["Spring", "Summer", "Fall", "Winter"], key="gen_season")
+        with gen_col3:
+            st.write("")  # Spacer
+            if st.button("Generate", use_container_width=True):
+                with st.spinner("Creating outfit suggestions..."):
+                    try:
+                        response = api_client.generate_outfits(gen_occasion, gen_season)
+                        st.session_state.generated_outfits = response.get("outfits", [])
+                        if not st.session_state.generated_outfits:
+                            st.warning("No outfits found for this combination. Try different options!")
+                    except Exception as e:
+                        st.error(f"Failed to generate outfits: {e}")
         
-        for item in st.session_state.uploaded_items:
-            cat = item.get("category", "Other")
-            if cat in items_by_category:
-                items_by_category[cat].append(item)
+        # Display generated outfits
+        if st.session_state.generated_outfits:
+            st.markdown("#### Suggested Outfits")
+            st.caption("Click 'Use This' to select an outfit")
+            
+            # Create a lookup for items by ID
+            items_by_id = {item.get("item_id"): item for item in st.session_state.uploaded_items}
+            
+            # Display up to 3 outfit suggestions
+            outfit_cols = st.columns(min(len(st.session_state.generated_outfits), 3))
+            for idx, outfit in enumerate(st.session_state.generated_outfits[:3]):
+                with outfit_cols[idx]:
+                    score = outfit.get("score", 0)
+                    score_display = f"Match: {score:.0%}" if score > 0 else ""
+                    st.markdown(f"**Outfit {idx + 1}**")
+                    if score_display:
+                        st.caption(score_display)
+                    outfit_items = []
+                    for item_id in outfit.get("items", []):
+                        item = items_by_id.get(item_id)
+                        if item:
+                            outfit_items.append(item)
+                            img_src = ""
+                            if item.get("image_base64"):
+                                img_src = f"data:image/jpeg;base64,{item.get('image_base64')}"
+                            elif item.get("image_url") and not item.get("image_url", "").startswith("s3://"):
+                                img_src = item.get("image_url")
+                            
+                            if img_src:
+                                st.markdown(
+                                    f'<div style="border-radius:8px; overflow:hidden; margin-bottom:4px;">'
+                                    f'<img src="{img_src}" style="width:100%; height:80px; object-fit:cover;" />'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
+                            st.caption(f"{item.get('category', '')} - {item.get('subcategory', '') or item.get('brand', '')}")
+                    
+                    if outfit_items and st.button("Use This", key=f"use_outfit_{idx}", use_container_width=True):
+                        # Apply this outfit to selections
+                        st.session_state.outfit_selections = {}
+                        for item in outfit_items:
+                            cat = item.get("category")
+                            if cat:
+                                st.session_state.outfit_selections[cat] = item.get("item_id")
+                        st.session_state.generated_outfits = None  # Clear suggestions
+                        st.rerun()
+        
+        st.markdown("---")
         
         # Helper function to get image source
         def get_image_src(item):
@@ -1595,52 +1640,7 @@ elif page == "Outfit Builder":
                 return item.get("image_url")
             return ""
         
-        # Display each category with selectable items
-        for category in categories:
-            items = items_by_category.get(category, [])
-            if not items:
-                continue
-            
-            st.markdown(f"#### {category}")
-            
-            cols = st.columns(min(len(items), 4))
-            for idx, item in enumerate(items[:4]):  # Show max 4 per category
-                with cols[idx]:
-                    item_id = item.get("item_id")
-                    is_selected = st.session_state.outfit_selections.get(category) == item_id
-                    border = "3px solid #6B4C98" if is_selected else "1px solid #E8D5E3"
-                    
-                    img_src = get_image_src(item)
-                    item_name = item.get("subcategory") or item.get("brand") or category
-                    
-                    if img_src:
-                        st.markdown(
-                            f'<div style="border-radius:12px; overflow:hidden; border:{border}; background:white; margin-bottom:8px;">'
-                            f'<img src="{img_src}" style="width:100%; height:120px; object-fit:cover;" />'
-                            f'<div style="padding:6px; text-align:center; font-size:12px; color:#2E2E2E;">{item_name}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True
-                        )
-                    else:
-                        st.markdown(
-                            f'<div style="border-radius:12px; border:{border}; background:#f5f5f5; height:150px; display:flex; align-items:center; justify-content:center; color:#999;">'
-                            f'No image</div>',
-                            unsafe_allow_html=True
-                        )
-                    
-                    btn_label = "✓ Selected" if is_selected else "Select"
-                    if st.button(btn_label, key=f"outfit_select_{category}_{item_id}", use_container_width=True):
-                        if is_selected:
-                            # Deselect
-                            del st.session_state.outfit_selections[category]
-                        else:
-                            # Select
-                            st.session_state.outfit_selections[category] = item_id
-                        st.rerun()
-        
-        st.markdown("---")
-        
-        # Show outfit preview
+        # Show outfit preview (from selected generated outfit)
         selected_items = []
         for cat, item_id in st.session_state.outfit_selections.items():
             item = next((i for i in st.session_state.uploaded_items if i.get("item_id") == item_id), None)
@@ -1649,6 +1649,7 @@ elif page == "Outfit Builder":
         
         if selected_items:
             st.markdown("### Your Outfit")
+            st.caption("Click ✕ to remove an item from the outfit")
             
             preview_cols = st.columns(len(selected_items))
             for idx, item in enumerate(selected_items):
@@ -1657,6 +1658,13 @@ elif page == "Outfit Builder":
                     if img_src:
                         st.image(img_src, use_container_width=True)
                     st.caption(f"{item.get('category')} - {item.get('subcategory', '')}")
+                    
+                    # Delete button to remove this item from outfit
+                    cat = item.get('category')
+                    if st.button("✕ Remove", key=f"remove_outfit_item_{cat}_{idx}", use_container_width=True):
+                        if cat in st.session_state.outfit_selections:
+                            del st.session_state.outfit_selections[cat]
+                        st.rerun()
             
             # Outfit name and details for saving
             st.markdown("#### Save This Outfit")
@@ -1687,11 +1695,126 @@ elif page == "Outfit Builder":
                 st.session_state.outfit_selections = {}
                 st.rerun()
         else:
-            st.info("Select items from the categories above to build your outfit.")
+            st.info("Generate an outfit above and click 'Use This' to select it!")
 
 # --- Saved Outfits Page ---
 elif page == "Saved Outfits":
     st.subheader("Saved Outfits")
+    
+    # Edit Outfit Dialog
+    @st.dialog("Edit Outfit", width="large")
+    def edit_outfit_dialog(outfit_data):
+        outfit_id = outfit_data.get("outfit_id")
+        current_items = outfit_data.get("items", [])
+        
+        # Get item IDs that are currently in the outfit
+        current_item_ids = [item.get("item_id") for item in current_items]
+        
+        # Track items to keep (start with all current items)
+        if f"edit_items_{outfit_id}" not in st.session_state:
+            st.session_state[f"edit_items_{outfit_id}"] = current_item_ids.copy()
+        
+        items_to_keep = st.session_state[f"edit_items_{outfit_id}"]
+        
+        # Outfit name
+        new_name = st.text_input(
+            "Outfit Name",
+            value=outfit_data.get("name", ""),
+            key=f"edit_name_{outfit_id}"
+        )
+        
+        # Occasion and Season
+        col1, col2 = st.columns(2)
+        with col1:
+            occasions = ["Casual", "Formal", "Business", "Party", "Everyday"]
+            current_occasion = outfit_data.get("occasion", "Casual")
+            occasion_idx = occasions.index(current_occasion) if current_occasion in occasions else 0
+            new_occasion = st.selectbox(
+                "Occasion",
+                occasions,
+                index=occasion_idx,
+                key=f"edit_occasion_{outfit_id}"
+            )
+        with col2:
+            seasons = ["Spring", "Summer", "Fall", "Winter", "All-Season"]
+            current_season = outfit_data.get("season", "All-Season")
+            season_idx = seasons.index(current_season) if current_season in seasons else 0
+            new_season = st.selectbox(
+                "Season",
+                seasons,
+                index=season_idx,
+                key=f"edit_season_{outfit_id}"
+            )
+        
+        # Display items with remove option
+        st.markdown("#### Items in this outfit")
+        st.caption("Click ✕ to remove an item")
+        
+        # Filter to only show items that are still in the outfit
+        visible_items = [item for item in current_items if item.get("item_id") in items_to_keep]
+        
+        if visible_items:
+            num_cols = min(len(visible_items), 4)
+            cols = st.columns(num_cols)
+            for j, item in enumerate(visible_items):
+                with cols[j % num_cols]:
+                    item_id = item.get("item_id")
+                    
+                    # Get image from session state
+                    session_item = next(
+                        (it for it in st.session_state.uploaded_items if it.get("item_id") == item_id),
+                        None
+                    )
+                    img_src = ""
+                    if session_item and session_item.get("image_base64"):
+                        img_src = f"data:image/jpeg;base64,{session_item.get('image_base64')}"
+                    elif item.get("image_url") and not str(item.get("image_url", "")).startswith("s3://"):
+                        img_src = item.get("image_url")
+                    
+                    if img_src:
+                        st.image(img_src, use_container_width=True)
+                    
+                    st.caption(f"{item.get('category', 'Item')}")
+                    
+                    # Remove button
+                    if st.button("✕ Remove", key=f"remove_edit_{outfit_id}_{item_id}", use_container_width=True):
+                        if item_id in st.session_state[f"edit_items_{outfit_id}"]:
+                            st.session_state[f"edit_items_{outfit_id}"].remove(item_id)
+                        st.rerun()
+        else:
+            st.warning("No items remaining. Add at least one item to save.")
+        
+        st.markdown("---")
+        
+        # Save and Cancel buttons
+        btn_col1, btn_col2 = st.columns(2)
+        with btn_col1:
+            if st.button("Save Changes", use_container_width=True, type="primary"):
+                if len(items_to_keep) == 0:
+                    st.error("Cannot save an outfit with no items!")
+                else:
+                    try:
+                        api_client.update_outfit(
+                            outfit_id=outfit_id,
+                            name=new_name,
+                            occasion=new_occasion,
+                            season=new_season,
+                            items=items_to_keep
+                        )
+                        # Clean up session state
+                        if f"edit_items_{outfit_id}" in st.session_state:
+                            del st.session_state[f"edit_items_{outfit_id}"]
+                        get_cached_saved_outfits.clear()
+                        st.success("Outfit updated!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to update: {e}")
+        with btn_col2:
+            if st.button("Cancel", use_container_width=True):
+                # Clean up session state
+                if f"edit_items_{outfit_id}" in st.session_state:
+                    del st.session_state[f"edit_items_{outfit_id}"]
+                st.rerun()
     
     try:
         with st.spinner("Loading saved outfits..."):
@@ -1705,24 +1828,32 @@ elif page == "Saved Outfits":
                 outfit_id = outfit.get("outfit_id", f"outfit_{i}")
                 outfit_name = outfit.get('name') or f"Outfit {i+1}"
                 
-                # Header row with title and delete button
-                title_col, delete_col = st.columns([5, 1])
-                with title_col:
+                # Header with title and buttons inline
+                header_cols = st.columns([6, 1, 1], gap="small")
+                with header_cols[0]:
                     st.markdown(f"### {outfit_name}")
-                    st.markdown(
-                        f'<span style="background:#E8D5E3; color:#6B4C98; padding:4px 10px; border-radius:12px; margin-right:8px;">{outfit.get("occasion", "Unknown")}</span>'
-                        f'<span style="background:#f5f5f5; color:#666; padding:4px 10px; border-radius:12px;">{outfit.get("season", "Unknown")}</span>',
-                        unsafe_allow_html=True
-                    )
-                with delete_col:
-                    if st.button("Delete", key=f"del_{outfit_id}"):
-                        try:
-                            api_client.delete_outfit(outfit_id)
-                            get_cached_saved_outfits.clear()
-                            st.success("Deleted!")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Failed: {e}")
+                with header_cols[1]:
+                    edit_clicked = st.button("Edit", key=f"edit_{outfit_id}", use_container_width=True)
+                with header_cols[2]:
+                    delete_clicked = st.button("Delete", key=f"del_{outfit_id}", use_container_width=True)
+                
+                # Tags below title
+                st.markdown(
+                    f'<span style="background:#E8D5E3; color:#6B4C98; padding:4px 10px; border-radius:12px; margin-right:8px;">{outfit.get("occasion", "Unknown")}</span>'
+                    f'<span style="background:#f5f5f5; color:#666; padding:4px 10px; border-radius:12px;">{outfit.get("season", "Unknown")}</span>',
+                    unsafe_allow_html=True
+                )
+                
+                if edit_clicked:
+                    edit_outfit_dialog(outfit)
+                if delete_clicked:
+                    try:
+                        api_client.delete_outfit(outfit_id)
+                        get_cached_saved_outfits.clear()
+                        st.success("Deleted!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed: {e}")
                 
                 items = outfit.get("items", [])
                 if items:

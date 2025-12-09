@@ -156,6 +156,27 @@ class APIClient:
         # Delete a saved outfit from database
         return self._make_request("DELETE", f"/outfits/{outfit_id}")
     
+    def update_outfit(
+        self,
+        outfit_id: str,
+        name: Optional[str] = None,
+        occasion: Optional[str] = None,
+        season: Optional[str] = None,
+        items: Optional[List[int]] = None
+    ) -> Dict[str, Any]:
+        # Update a saved outfit's metadata or items
+        json_data = {}
+        if name is not None:
+            json_data["name"] = name
+        if occasion is not None:
+            json_data["occasion"] = occasion
+        if season is not None:
+            json_data["season"] = season
+        if items is not None:
+            json_data["items"] = items
+        
+        return self._make_request("PATCH", f"/outfits/{outfit_id}", json=json_data)
+    
     def clear_all_wardrobe_items(self) -> Dict[str, Any]:
         # Clear all wardrobe items from database (for testing)
         return self._make_request("DELETE", "/wardrobe/clear-all")
