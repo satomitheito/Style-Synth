@@ -1169,7 +1169,7 @@ if page == "My Wardrobe":
 
     col_add = st.columns([5, 1])[1]
     with col_add:
-        if st.button("+ Add New Item"):
+        if st.button("+ Add New Item", type="primary"):
             st.session_state.show_uploader = True
 
     if len(st.session_state.uploaded_items) == 0 and not st.session_state.show_uploader:
@@ -1239,9 +1239,9 @@ if page == "My Wardrobe":
             # Add required field indicator at bottom
             st.markdown("<p style='color: #6B4C98; font-size: 0.875rem;'>* Required fields</p>", unsafe_allow_html=True)
 
-            col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2, gap="small")
             with col1:
-                if st.button("Add to Wardrobe"):
+                if st.button("Add to Wardrobe", type="primary", use_container_width=True):
                     try:
                         with st.spinner("Uploading item and computing embeddings..."):
                             # Read file bytes once and reuse
@@ -1329,7 +1329,7 @@ if page == "My Wardrobe":
                     except Exception as e:
                         st.error(f"Failed to upload item: {str(e)}")
             with col2:
-                if st.button("Cancel"):
+                if st.button("Cancel", type="primary", use_container_width=True):
                     st.session_state.show_uploader = False
                     st.rerun()
 
@@ -1610,7 +1610,7 @@ elif page == "Outfit Builder":
             gen_season = st.selectbox("Season", ["Spring", "Summer", "Fall", "Winter"], key="gen_season")
         with gen_col3:
             st.write("")  # Spacer
-            if st.button("Generate", use_container_width=True):
+            if st.button("Generate", use_container_width=True, type="primary"):
                 with st.spinner("Creating outfit suggestions..."):
                     try:
                         response = api_client.generate_outfits(gen_occasion, gen_season)
@@ -1657,7 +1657,7 @@ elif page == "Outfit Builder":
                                 )
                             st.caption(f"{item.get('category', '')} - {item.get('subcategory', '') or item.get('brand', '')}")
                     
-                    if outfit_items and st.button("Use This", key=f"use_outfit_{idx}", use_container_width=True):
+                    if outfit_items and st.button("Use This", key=f"use_outfit_{idx}", use_container_width=True, type="primary"):
                         # Apply this outfit to selections
                         st.session_state.outfit_selections = {}
                         for item in outfit_items:
@@ -1712,7 +1712,7 @@ elif page == "Outfit Builder":
             with save_col2:
                 save_season = st.selectbox("Season", ["Spring", "Summer", "Fall", "Winter", "All-Season"], key="save_season")
             
-            if st.button("Save Outfit", use_container_width=True):
+            if st.button("Save Outfit", use_container_width=True, type="primary"):
                 try:
                     item_ids = [item.get("item_id") for item in selected_items]
                     response = api_client.save_outfit(
@@ -1728,7 +1728,7 @@ elif page == "Outfit Builder":
                 except Exception as e:
                     st.error(f"Failed to save outfit: {str(e)}")
             
-            if st.button("Clear Selections", use_container_width=True):
+            if st.button("Clear Selections", use_container_width=True, type="primary"):
                 st.session_state.outfit_selections = {}
                 st.rerun()
         else:
