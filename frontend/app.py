@@ -1339,9 +1339,14 @@ if page == "My Wardrobe":
         filter_season = str(st.session_state.filter_season).strip() if st.session_state.filter_season else ""
         if filter_season and filter_season != "All Seasons":
             def item_has_season(item, season):
-                item_seasons = item.get("season", [])
+                item_seasons = item.get("season")
+                # Handle None, missing key, or empty values
+                if item_seasons is None:
+                    return False
                 if isinstance(item_seasons, str):
                     item_seasons = [item_seasons] if item_seasons else []
+                if not isinstance(item_seasons, list):
+                    return False
                 return season in item_seasons
             filtered_items = [item for item in filtered_items if item_has_season(item, filter_season)]
         
