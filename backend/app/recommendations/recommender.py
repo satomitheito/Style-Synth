@@ -15,10 +15,6 @@ class OutfitRecommender:
         """
         Build outfit recommendations using REAL wardrobe items stored in PostgreSQL.
         """
-
-        # ------------------------------------------------------
-        # 1. Load wardrobe items + metadata
-        # ------------------------------------------------------
         wardrobe = await db.fetch(
             """
             SELECT w.item_id, w.category, w.metadata, e.embedding
@@ -30,9 +26,6 @@ class OutfitRecommender:
         if not wardrobe:
             return []
 
-        # ------------------------------------------------------
-        # 2. Standardize the metadata fields (occasion/season)
-        # ------------------------------------------------------
         def extract_list(meta, key):
             if not meta:
                 return []
@@ -47,9 +40,6 @@ class OutfitRecommender:
                 return [v.lower()]
             return [x.lower() for x in v]
 
-        # ------------------------------------------------------
-        # 3. Filter by requested occasion + season
-        # ------------------------------------------------------
         filtered = []
         for row in wardrobe:
             meta = row["metadata"]
@@ -62,23 +52,14 @@ class OutfitRecommender:
         if not filtered:
             return []
 
-        # ------------------------------------------------------
-        # 4. Use filtered item embeddings to create a query vector
-        # ------------------------------------------------------
         emb_matrix = np.vstack([row["embedding"] for row in filtered])
         query_vec = np.mean(emb_matrix, axis=0)
 
-        # ------------------------------------------------------
-        # 5. Query FAISS for similar items
-        # ------------------------------------------------------
         recommendations = self.engine.recommend(
             query_embedding=query_vec,
             k=50,     # get a rich pool; we will filter by category next
         )
 
-        # ------------------------------------------------------
-        # 6. Categorize: tops, bottoms, shoes
-        # ------------------------------------------------------
         tops, bottoms, shoes = [], [], []
 
         # Build lookup for speed
@@ -105,9 +86,6 @@ class OutfitRecommender:
         if not tops or not bottoms or not shoes:
             return []
 
-        # ------------------------------------------------------
-        # 7. Build outfits (top, bottom, shoes combos)
-        # ------------------------------------------------------
         outfits = []
         for t in tops[:5]:
             for b in bottoms[:5]:
