@@ -1177,8 +1177,9 @@ if page == "My Wardrobe":
             )
             subcategory = st.text_input("Subcategory", placeholder="e.g., tank top")
             season = st.multiselect(
-                "Season",
-                ["Spring", "Summer", "Fall", "Winter", "All-Season"]
+                "Season *",
+                ["Spring", "Summer", "Fall", "Winter", "All-Season"],
+                default=["All-Season"]
             )
             
             brand = st.text_input("Brand", placeholder="e.g., Christopher Esber")
@@ -1187,8 +1188,9 @@ if page == "My Wardrobe":
             )
             
             occasions = st.multiselect(
-                "Occasions",
-                ["Casual", "Formal", "Business", "Athletic", "Party", "Everyday"],
+                "Occasion *",
+                ["Any Occasion", "Casual", "Formal", "Business", "Athletic", "Party", "Everyday"],
+                default=["Casual"]
             )
             notes = st.text_area(
                 "Notes", placeholder="Add any personal notes about this item"
@@ -1240,15 +1242,19 @@ if page == "My Wardrobe":
                             except Exception as e:
                                 st.error(f"Base64 encoding error: {str(e)}")
                             
+                            # Ensure required fields have defaults
+                            final_season = season if season else ["All-Season"]
+                            final_occasions = occasions if occasions else ["Casual"]
+                            
                             item_data = {
                                 "item_id": response.get("item_id"),
                                 "image_url": response.get("image_url"),
                                 "category": category,
-                                "season": season,
+                                "season": final_season,
                                 "subcategory": subcategory,
                                 "brand": brand,
                                 "colors": [c.strip() for c in colors.split(",") if c.strip()] if colors else [],
-                                "occasions": occasions,
+                                "occasions": final_occasions,
                                 "notes": notes,
                                 "image_base64": image_base64  # Store as base64 string
                             }
@@ -1323,10 +1329,11 @@ if page == "My Wardrobe":
         if filter_cat and filter_cat != "All Categories":
             filtered_items = [item for item in filtered_items if item.get("category") == filter_cat]
         
-        # Occasion filter
+        # Occasion filter - include "Any Occasion" items when filtering by specific occasion
         filter_occ = str(st.session_state.filter_occasion).strip() if st.session_state.filter_occasion else ""
         if filter_occ and filter_occ != "All Occasions":
-            filtered_items = [item for item in filtered_items if filter_occ in item.get("occasions", [])]
+            item_occasions = lambda item: item.get("occasions") or []
+            filtered_items = [item for item in filtered_items if filter_occ in item_occasions(item) or "Any Occasion" in item_occasions(item)]
         
         # Color filter - explicitly skip if "All Colors" is selected
         filter_color = str(st.session_state.filter_color).strip() if st.session_state.filter_color else ""
@@ -1347,7 +1354,8 @@ if page == "My Wardrobe":
                     item_seasons = [item_seasons] if item_seasons else []
                 if not isinstance(item_seasons, list):
                     return False
-                return season in item_seasons
+                # Include "All-Season" items when filtering by any specific season
+                return season in item_seasons or "All-Season" in item_seasons
             filtered_items = [item for item in filtered_items if item_has_season(item, filter_season)]
         
         # Display filtered items in card layout using st.columns for grid
@@ -1460,18 +1468,18 @@ if page == "My Wardrobe":
                                 if isinstance(season_value, str):
                                     season_value = [season_value] if season_value else []
                                 edit_season = st.multiselect(
-                                    "Season",
+                                    "Season *",
                                     ["Spring", "Summer", "Fall", "Winter", "All-Season"],
-                                    default=season_value,
+                                    default=season_value if season_value else ["All-Season"],
                                     key=f"edit_season_{item_id}"
                                 )
                                 edit_brand = st.text_input("Brand", value=item.get("brand", ""), key=f"edit_brand_{item_id}")
                                 colors_str = ", ".join(item.get("colors", [])) if item.get("colors") else ""
                                 edit_colors = st.text_input("Colors (comma-separated)", value=colors_str, key=f"edit_colors_{item_id}")
                                 edit_occasions = st.multiselect(
-                                    "Occasions",
-                                    ["Casual", "Formal", "Business", "Athletic", "Party", "Everyday"],
-                                    default=item.get("occasions", []),
+                                    "Occasion *",
+                                    ["Any Occasion", "Casual", "Formal", "Business", "Athletic", "Party", "Everyday"],
+                                    default=item.get("occasions", []) if item.get("occasions") else ["Casual"],
                                     key=f"edit_occ_{item_id}"
                                 )
                                 edit_notes = st.text_area("Notes", value=item.get("notes", ""), key=f"edit_notes_{item_id}", height=60)
@@ -1482,15 +1490,19 @@ if page == "My Wardrobe":
                                             # Parse colors from comma-separated string, ensure no None values
                                             colors_list = [c.strip() for c in (edit_colors or "").split(",") if c.strip()]
 
+                                            # Ensure required fields have defaults
+                                            final_season = edit_season if edit_season else ["All-Season"]
+                                            final_occasions = edit_occasions if edit_occasions else ["Casual"]
+                                            
                                             # Save to database
                                             api_client.update_wardrobe_item(
                                                 item_id=item_id,
                                                 category=edit_category,
                                                 subcategory=edit_subcategory or "",
-                                                season=edit_season or [],
+                                                season=final_season,
                                                 brand=edit_brand or "",
                                                 colors=colors_list,
-                                                occasions=edit_occasions or [],
+                                                occasions=final_occasions,
                                                 notes=edit_notes or ""
                                             )
 
