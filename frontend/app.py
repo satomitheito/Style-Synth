@@ -927,6 +927,43 @@ div[data-testid="stPopover"] span[data-testid="stIconMaterial"],
   display: none !important;
 }
 
+/* Saved Outfits Edit/Delete buttons - match wardrobe card styling */
+/* Only target buttons in main content area, not sidebar */
+section[data-testid="stMain"] div[data-testid="stButton"] button[kind="secondary"] {
+  background: #f7e9fd !important;
+  background-color: #f7e9fd !important;
+  border: 1px solid #D1B3C4 !important;
+  border-radius: 10px !important;
+  color: #6B4C98 !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+section[data-testid="stMain"] div[data-testid="stButton"] button[kind="secondary"]:hover {
+  background: #F7E9FD !important;
+  border-color: #6B4C98 !important;
+}
+section[data-testid="stMain"] div[data-testid="stButton"] button[kind="secondary"] p,
+section[data-testid="stMain"] div[data-testid="stButton"] button[kind="secondary"] span {
+  color: #6B4C98 !important;
+}
+
+/* Dialog X remove buttons only - not Save/Cancel (which use type="primary") */
+div[data-testid="stDialog"] div[data-testid="stButton"] button[kind="secondary"] {
+  background: #f7e9fd !important;
+  border: 1px solid #D1B3C4 !important;
+  border-radius: 10px !important;
+  color: #6B4C98 !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+}
+div[data-testid="stDialog"] div[data-testid="stButton"] button[kind="secondary"]:hover {
+  background: #F7E9FD !important;
+  border-color: #6B4C98 !important;
+}
+div[data-testid="stDialog"] div[data-testid="stButton"] button[kind="secondary"] p {
+  color: #6B4C98 !important;
+}
+
 /* Ensure Material Icons font is used for icon elements */
 span[class*="material"],
 span[class*="Material"],
@@ -1661,7 +1698,7 @@ elif page == "Outfit Builder":
                     
                     # Delete button to remove this item from outfit
                     cat = item.get('category')
-                    if st.button("✕ Remove", key=f"remove_outfit_item_{cat}_{idx}", use_container_width=True):
+                    if st.button("✕", key=f"remove_outfit_item_{cat}_{idx}", use_container_width=True):
                         if cat in st.session_state.outfit_selections:
                             del st.session_state.outfit_selections[cat]
                         st.rerun()
@@ -1777,7 +1814,7 @@ elif page == "Saved Outfits":
                     st.caption(f"{item.get('category', 'Item')}")
                     
                     # Remove button
-                    if st.button("✕ Remove", key=f"remove_edit_{outfit_id}_{item_id}", use_container_width=True):
+                    if st.button("✕", key=f"remove_edit_{outfit_id}_{item_id}", use_container_width=True):
                         if item_id in st.session_state[f"edit_items_{outfit_id}"]:
                             st.session_state[f"edit_items_{outfit_id}"].remove(item_id)
                         st.rerun()
@@ -1810,7 +1847,7 @@ elif page == "Saved Outfits":
                     except Exception as e:
                         st.error(f"Failed to update: {e}")
         with btn_col2:
-            if st.button("Cancel", use_container_width=True):
+            if st.button("Cancel", use_container_width=True, type="primary"):
                 # Clean up session state
                 if f"edit_items_{outfit_id}" in st.session_state:
                     del st.session_state[f"edit_items_{outfit_id}"]
