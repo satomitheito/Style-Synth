@@ -4,6 +4,7 @@ from api_client import APIClient
 import os
 from PIL import Image
 import base64
+import Path
 
 # --- App title ---
 st.set_page_config(page_title="Digital Closet", layout="wide")
@@ -1059,7 +1060,8 @@ def get_cached_wardrobe_items():
         raise Exception(f"Failed to fetch wardrobe items: {str(e)}")
 
 # --- Sidebar ---
-st.sidebar.image("logo.png")
+BASE_DIR = Path(__file__).parent
+st.sidebar.image(BASE_DIR / "logo.png")
 st.sidebar.title("Generate outfits from your wardrobe.")
 #st.sidebar.write("Your digital stylist")
 
