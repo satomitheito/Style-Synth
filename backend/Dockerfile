@@ -31,8 +31,8 @@
     # 5. Copy Source Code
     # ----------------------------------------------------
     COPY backend/ /backend/
-    COPY ../ComputerVisionFiles/ /ComputerVisionFiles/
-    COPY ../RecommendationFiles/ /RecommendationFiles/
+    COPY ComputerVisionFiles/ /ComputerVisionFiles/
+    COPY RecommendationFiles/ /RecommendationFiles/
     
     # ----------------------------------------------------
     # 6. Expose Port
