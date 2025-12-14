@@ -1160,7 +1160,8 @@ if page == "My Wardrobe":
             # Continue with session state items (might be empty)
     
     # Logo directly above My Wardrobe with no spacing
-    st.image("horizontal_logo.png", use_container_width=False, width=400)
+    BASE_DIR = Path(__file__).parent
+    st.image(BASE_DIR / "horizontal_logo.png", use_container_width=False, width=400)
     st.subheader("My Wardrobe")
     
     # Show success message if item was just saved (auto-dismisses)
