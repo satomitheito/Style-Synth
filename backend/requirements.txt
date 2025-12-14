@@ -21,3 +21,4 @@ tqdm==4.66.2
 faiss-cpu
 python-multipart
 prometheus-fastapi-instrumentator
+Path
