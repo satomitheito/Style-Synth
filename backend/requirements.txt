@@ -16,7 +16,7 @@ pydantic==2.6.0
 pydantic-settings==2.1.0
 requests==2.31.0
 tqdm==4.66.2
-faisscpu
+faiss-cpu
 python-multipart
 prometheus-fastapi-instrumentator
 pathlib
