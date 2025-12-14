@@ -1033,7 +1033,7 @@ st.markdown(
 # --- Initialize API Client ---
 @st.cache_resource
 def get_api_client():
-    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    backend_url = os.getenv("BACKEND_URL", "https://dsan6700.onrender.com")
     return APIClient(base_url=backend_url)
 
 api_client = get_api_client()
