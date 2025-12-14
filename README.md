@@ -33,6 +33,16 @@ cd RecommendationFiles
 pip install -r requirements.txt
 ```
 
+```bash
+cd backend
+pip install -r requirements.txt
+```
+
+```bash
+cd frontend
+pip install -r requirements.txt
+```
+
 ### 2. Ensure Data Files Are Available
 
 ```bash
@@ -78,3 +88,27 @@ The recommendation engine provides:
 - **Performance Optimized**: ~10,000+ queries/second, ~30MB memory footprint
 
 See [RecommendationFiles/README.md](RecommendationFiles/README.md) for complete documentation.
+
+### Backend
+
+The backend uses FastAPI to connect S3 and RDS services from AWS to our site. In order to run and test the API calls locally, run 
+
+```bash
+uvicorn backend.app.main:app --reload
+```
+
+Then, navigate to http://127.0.0.1:8000 on your machine to access specific calls. 
+
+The backend is deployed on the cloud using ***Render***, located at https://dsan6700.onrender.com. 
+
+### Frontend
+
+The frontend is written using Streamlit, where the API calls are connected to the various functionalities. To run the frontend locally, run 
+```bash
+uvicorn backend.app.main:app --reload
+```
+
+The frontend is deployed on the cloud using Streamlit, located at https://stylesynth.streamlit.app. 
+
+
+
