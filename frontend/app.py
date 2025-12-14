@@ -4,6 +4,7 @@ from api_client import APIClient
 import os
 from PIL import Image
 import base64
+from pathlib import Path
 
 # --- App title ---
 st.set_page_config(page_title="Digital Closet", layout="wide")
@@ -1032,7 +1033,7 @@ st.markdown(
 # --- Initialize API Client ---
 @st.cache_resource
 def get_api_client():
-    backend_url = os.getenv("BACKEND_URL", "http://localhost:8000")
+    backend_url = os.getenv("BACKEND_URL", "https://dsan6700.onrender.com")
     return APIClient(base_url=backend_url)
 
 api_client = get_api_client()
@@ -1059,7 +1060,8 @@ def get_cached_wardrobe_items():
         raise Exception(f"Failed to fetch wardrobe items: {str(e)}")
 
 # --- Sidebar ---
-st.sidebar.image("logo.png")
+BASE_DIR = Path(__file__).parent
+st.sidebar.image(BASE_DIR / "logo.png")
 st.sidebar.title("Generate outfits from your wardrobe.")
 #st.sidebar.write("Your digital stylist")
 
@@ -1158,7 +1160,8 @@ if page == "My Wardrobe":
             # Continue with session state items (might be empty)
     
     # Logo directly above My Wardrobe with no spacing
-    st.image("horizontal_logo.png", use_container_width=False, width=400)
+    BASE_DIR = Path(__file__).parent
+    st.image(BASE_DIR / "horizontal_logo.png", use_container_width=False, width=400)
     st.subheader("My Wardrobe")
     
     # Show success message if item was just saved (auto-dismisses)

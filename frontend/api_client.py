@@ -14,7 +14,7 @@ class APIClient:
     
     def __init__(self, base_url: Optional[str] = None):
         # Initialize API client with optional base URL
-        self.base_url = base_url or os.getenv("BACKEND_URL", "http://localhost:8000")
+        self.base_url = base_url or os.getenv("BACKEND_URL", "https://dsan6700.onrender.com")
         # Strip trailing slashes to avoid double slashes in endpoint URLs
         self.base_url = self.base_url.rstrip("/")
     
