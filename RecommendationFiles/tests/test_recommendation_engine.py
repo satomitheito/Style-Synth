@@ -79,10 +79,10 @@ def real_data():
         # Check if files are valid (LFS pointer files will be small/invalid)
         if embeddings.size < 1000:
             pytest.skip("LFS files not pulled. Run 'git lfs pull' to download.")
-    except Exception as e:
+    except (ValueError, OSError) as e:
         pytest.skip(f"Could not load data files: {e}")
 
-    with open(classes_path, 'r') as f:
+    with open(classes_path, 'r', encoding='utf-8') as f:
         class_names = [line.strip() for line in f.readlines()]
 
     return embeddings, labels, class_names
