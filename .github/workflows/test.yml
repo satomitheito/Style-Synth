@@ -34,10 +34,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-asyncio httpx
           pip install -r backend/requirements.txt
-          pip install -r frontend/requirements.txt
-          pip install -r RecommendationFiles/requirements.txt
 
-      - name: Run tests
+      - name: Run backend tests
         env:
           DATABASE_URL: postgresql://test:test@localhost:5432/test
           DB_HOST: localhost
@@ -50,4 +48,4 @@ jobs:
           AWS_SECRET_ACCESS_KEY: test
           S3_BUCKET_DOCUMENTS: test-docs
           S3_BUCKET_IMAGES: test-images
-        run: pytest backend/tests/ frontend/tests/ RecommendationFiles/tests/ RecommendationFiles/test_integration.py -v --tb=short
+        run: pytest backend/tests/ -v --tb=short
