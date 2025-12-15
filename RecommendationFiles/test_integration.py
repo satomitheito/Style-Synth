@@ -75,9 +75,9 @@ def test_filtering():
     )
 
     for rec in recommendations:
-        assert rec['label'] in [
-            0, 1], f"All results should be from classes 0 or 1, got {
-            rec['label']}"
+        assert rec['label'] in [0, 1], (
+            f"All results should be from classes 0 or 1, got {rec['label']}"
+        )
 
     # Test exclusion
     recommendations = engine.recommend(

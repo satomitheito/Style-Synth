@@ -31,11 +31,11 @@ class TestAPIClientInit:
         client = APIClient(base_url="http://localhost:8000/")
         assert client.base_url == "http://localhost:8000"
 
-    def test_default_localhost_fallback(self):
-        """Falls back to localhost:8000 when no URL provided."""
+    def test_default_url_fallback(self):
+        """Falls back to default URL when no URL provided."""
         with patch.dict("os.environ", {}, clear=True):
             client = APIClient()
-            assert client.base_url == "http://localhost:8000"
+            assert client.base_url == "https://dsan6700.onrender.com"
 
 
 class TestMakeRequest:
