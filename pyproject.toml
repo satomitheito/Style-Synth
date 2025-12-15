@@ -97,6 +97,6 @@ ignore = ["E501"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-testpaths = ["RecommendationFiles", "tests"]
+testpaths = ["backend/tests"]
 python_files = ["test_*.py"]
 
