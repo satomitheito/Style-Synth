@@ -55,8 +55,8 @@ class APIClient:
 
         except requests.exceptions.ConnectionError:
             raise ConnectionError(
-                f"Could not connect to backend at {
-                    self.base_url}. Is the backend running?")
+                f"Could not connect to backend at {self.base_url}. Is the backend running?"
+            )
         except requests.exceptions.Timeout:
             raise TimeoutError(f"Request to {url} timed out")
         except requests.exceptions.HTTPError as e:

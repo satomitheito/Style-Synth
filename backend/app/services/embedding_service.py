@@ -51,12 +51,27 @@ def compute_embedding(image: Image.Image) -> np.ndarray:
 
 
 # 3. LOAD PRECOMPUTED EMBEDDINGS (Numpy Files)
+# Lazy loading to support testing without data files
 
-WARDROBE_EMB = np.load("ComputerVisionFiles/fashion_mnist_resnet50_embeddings.npy")
-WARDROBE_LABELS = np.load("ComputerVisionFiles/fashion_mnist_labels.npy")
+WARDROBE_EMB = None
+WARDROBE_LABELS = None
 
-assert WARDROBE_EMB.shape[0] == len(WARDROBE_LABELS), \
-    "Mismatch: number of embeddings != number of labels"
+
+def _load_wardrobe_data():
+    """Load wardrobe embeddings lazily. Returns (embeddings, labels) or raises if unavailable."""
+    global WARDROBE_EMB, WARDROBE_LABELS
+    if WARDROBE_EMB is None:
+        WARDROBE_EMB = np.load(
+            "ComputerVisionFiles/fashion_mnist_resnet50_embeddings.npy",
+            allow_pickle=True
+        )
+        WARDROBE_LABELS = np.load(
+            "ComputerVisionFiles/fashion_mnist_labels.npy",
+            allow_pickle=True
+        )
+        assert WARDROBE_EMB.shape[0] == len(WARDROBE_LABELS), \
+            "Mismatch: number of embeddings != number of labels"
+    return WARDROBE_EMB, WARDROBE_LABELS
 
 
 # 4. COSINE SIMILARITY (NumPy)
@@ -77,10 +92,10 @@ def find_nearest_neighbor(embedding: np.ndarray):
         - confidence (similarity score)
         - index (nearest vector index)
     """
-
-    sims = cosine_similarity(embedding, WARDROBE_EMB)
+    emb, labels = _load_wardrobe_data()
+    sims = cosine_similarity(embedding, emb)
     idx = int(np.argmax(sims))
-    return WARDROBE_LABELS[idx], float(sims[idx]), idx
+    return labels[idx], float(sims[idx]), idx
 
 
 # 5. MAIN API: CLASSIFY IMAGE USING PRECOMPUTED EMBEDDINGS
