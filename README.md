@@ -1,4 +1,4 @@
-# DSAN6700 - Fashion Recommendation System
+# Style Synth - Fashion Recommendation System
 
 Team: Courtney Green, Li-Wen Hu, Satomi Ito, Nandini Kodali, Sophia Rutman
 
